@@ -1,4 +1,9 @@
 import json
+import string
+
+from nltk.corpus import stopwords
+from nltk.tokenize import sent_tokenize, word_tokenize
+from nltk.stem.snowball import EnglishStemmer
 # import jsonshelve
 import shelve
 from pprint import pprint
@@ -14,6 +19,17 @@ db = PersistentDict(filename=filename)
 
 # index = shelve.open('index')
 
+
+
+def get_stemmed_list(data):
+    words_to_be_removed = string.punctuation + (set(stopwords.words('english')) - ['not'])
+    stemmer = EnglishStemmer()
+    words = word_tokenize(data)
+    words = [w for (w not in words_to_be_removed) in words]
+    return[stemmer.stem(w) for w in words]
+
+
+
 def create_index(data):
     """
     creates inverted index
@@ -21,15 +37,14 @@ def create_index(data):
     :param id: id of the document
     :return: None
     """
-    string=data['data'].lower().split(' ')
+    stemmed_words = get_stemmed_list(data)
     id = data['id']
-    for pos, word in enumerate(string):
+    for pos, word in enumerate(stemmed_words):
         try:
             if id not in index[word]:
                 index[word][id] = [pos,]
             else:
                 # look for better way
-                print "id", index[word][id]
                 index[word][id]= list(set(index[word][id]).add(pos))
         except KeyError:
             index[word] = dict()
@@ -39,7 +54,6 @@ def create_index(data):
 
 
 def store_object(data):
-
     db[data['id']] = data
     create_index(data)
     db.sync()
@@ -59,7 +73,7 @@ def get_all():
 
 
 def match(q):
-    words = q.strip().split(' ')
+    words = get_stemmed_list(q)
     id_list = list()
     for word in words:
         id_list.extend(index[word].keys())
