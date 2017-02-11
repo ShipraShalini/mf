@@ -34,5 +34,10 @@ def delete(oid):
         return delete_object(oid)
 
 
+@app.route('/test/', methods=['GET'])
+def add():
+    if request.method == 'GET':
+        return "done"
+
 if __name__ == '__main__':
     app.run()
