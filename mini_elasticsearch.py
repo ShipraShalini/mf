@@ -35,7 +35,7 @@ def delete(oid):
 
 
 @app.route('/test/', methods=['GET'])
-def add():
+def test():
     if request.method == 'GET':
         return "done"
 
