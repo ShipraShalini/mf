@@ -6,6 +6,7 @@ import math
 import string
 from operator import itemgetter
 
+from nltk.corpus import stopwords
 from nltk.stem.snowball import EnglishStemmer
 from nltk.tokenize import word_tokenize
 
@@ -30,8 +31,9 @@ def get_tf_key(id, key):
 
 
 def get_stemmed_list(data):
-    # print "stopwords", set(stopwords.words('english')).discard('not')
-    words_to_be_removed = set(string.punctuation)  # | set(stopwords.words('english')).discard('not') or set()
+    stop_words = set(stopwords.words('english'))
+    stop_words.discard('not')
+    words_to_be_removed = set(string.punctuation) | stop_words
     stemmer = EnglishStemmer()
     words = word_tokenize(data)
     words = filter(lambda x: x not in words_to_be_removed, words)
