@@ -1,4 +1,8 @@
-import pickle, json, csv, os, shutil
+import csv
+import json
+import os
+import pickle
+import shutil
 
 
 class PersistentDict(dict):
@@ -16,12 +20,12 @@ class PersistentDict(dict):
     '''
 
     def __init__(self, filename, flag='c', mode=0644, format='json', *args, **kwds):
-        self.flag = flag                    # r=readonly, c=create, or n=new
-        self.mode = mode                    # None or an octal triple like 0644
-        self.format = format                # 'csv', 'json', or 'pickle'
+        self.flag = flag  # r=readonly, c=create, or n=new
+        self.mode = mode  # None or an octal triple like 0644
+        self.format = format  # 'csv', 'json', or 'pickle'
         self.filename = filename
         if flag != 'n' and os.access(filename, os.R_OK):
-            fileobj = open(filename,'r')
+            fileobj = open(filename, 'r')
             with fileobj:
                 self.load(fileobj)
         dict.__init__(self, *args, **kwds)
@@ -40,7 +44,7 @@ class PersistentDict(dict):
             raise
         finally:
             fileobj.close()
-        shutil.move(tempname, self.filename)    # atomic commit
+        shutil.move(tempname, self.filename)  # atomic commit
         if self.mode is not None:
             os.chmod(self.filename, self.mode)
 
@@ -72,7 +76,6 @@ class PersistentDict(dict):
             except Exception:
                 pass
         raise ValueError('File not in a supported format')
-
 
 
 if __name__ == '__main__':
