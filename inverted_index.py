@@ -22,7 +22,8 @@ db = PersistentDict(filename=filename)
 def tf(word, data):
     return data.count(word) / len(data)
 
-def idf(word, docs_with_the_word):
+def idf(word, tf, docs_with_the_word):
+    # print word, docs_with_the_word, len(db) , math.log(len(db) / tf)
     return math.log(len(db) / docs_with_the_word)
 
 def get_tf_key(id, key):
@@ -51,12 +52,12 @@ def create_index(data):
             try:
                 if id not in index[word]:
                     index[word][id] = {key: [pos,]}
-                    index[word]['_idf']= idf(word, docs_with_the_word=len(index[word])-2)
-                    index[word]['_tf']= {get_tf_key(id, key): tf(word, data[key])}
-
+                    _tf = tf(word, data[key])
+                    index[word]['_idf']= idf(word, index[word]['_tf'], docs_with_the_word=len(index[word])-2)
+                    index[word]['_tf'][get_tf_key(id, key)] = tf(word, data[key])
                 elif key not in index[word][id]:
                     index[word][id][key] = [pos,]
-                    index[word]['_tf'] = {get_tf_key(id, key): tf(word, data[key])}
+                    index[word]['_tf'][get_tf_key(id, key)] = tf(word, data[key])
                 else:
                     # look for better way
                     pos_set = set(index[word][id][key])
@@ -71,7 +72,6 @@ def create_index(data):
                     '_idf': idf(word, docs_with_the_word=1),
                     '_tf': {get_tf_key(id, key): tf(word, data[key])}
                 }
-    pprint(index)
     index.sync()
 
 
@@ -100,7 +100,8 @@ def get_all():
 
 
 def match(q):
-    pprint(index)
+    # pprint(index)
+    # print "\n\n\n"
     words = get_stemmed_list(q)
     id_list = []
     for word in words:
@@ -108,27 +109,26 @@ def match(q):
         id_list.remove('_idf')
         id_list.remove('_tf')
 
-
     # assumption, verify performance
     id_list = list(set(id_list))
-    print "id_list", id_list
-
+    id_list.sort()
     object_list = []
-    for i in id_list:
-        try:
-            tf_idf = index[word]['_tf'][get_tf_key(id, 'title')] * index[word]['_idf'] + 0.3 # more preference to title
-            tf_idf_no = 1
-        except KeyError:
-            tf_idf = 0
-            tf_idf_no = 1
-        try:
-            tf_idf += index[word]['_tf'][get_tf_key(id, 'data')] * index[word]['_idf']
-            tf_idf_no += 1
-        except KeyError:
-            pass
-        tf_idf = tf_idf/tf_idf_no
-        object_list.append({'data': db[i], 'tf_idf':tf_idf})
-        sorted(object_list, key=itemgetter('tf_idf'), reverse=True)
-        pprint(object_list)
-        pprint(db)
+    for oid in id_list:
+        for word in words:
+            idf = index[word]['_idf'] or 1
+            try:
+                tf_idf = index[word]['_tf'][get_tf_key(oid, 'title')] * idf + 0.3 # more preference to title
+                tf_idf_no = 1
+            except KeyError:
+                tf_idf = 0
+                tf_idf_no = 1
+            try:
+                tf_idf += index[word]['_tf'][get_tf_key(oid, 'data')] * idf
+                tf_idf_no += 1
+            except KeyError:
+                pass
+            tf_idf = tf_idf/tf_idf_no
+            object_list.append({'data': db[oid], 'tf_idf':tf_idf})
+    sorted(object_list, key=itemgetter('tf_idf'), reverse=True)
+    print "len", len(object_list)
     return json.dumps([d['data'] for d in object_list])
