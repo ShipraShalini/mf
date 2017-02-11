@@ -4,7 +4,7 @@ from flask import Flask
 from flask import Response
 from flask import request
 
-from inverted_index import store_object, match, get_all
+from inverted_index import store_object, match, get_all, delete_object
 
 app = Flask(__name__)
 
@@ -26,6 +26,11 @@ def search():
 def get():
     if request.method == 'GET':
         return Response(get_all(), content_type='application/json')
+
+@app.route('/<oid>/', methods=['DELETE'])
+def delete(oid):
+    if request.method == 'DELETE':
+        return delete_object(oid)
 
 if __name__ == '__main__':
     app.run()

@@ -22,8 +22,7 @@ db = PersistentDict(filename=filename)
 def tf(word, data):
     return data.count(word) / len(data)
 
-def idf(word, tf, docs_with_the_word):
-    # print word, docs_with_the_word, len(db) , math.log(len(db) / tf)
+def idf(docs_with_the_word):
     return math.log(len(db) / docs_with_the_word)
 
 def get_tf_key(id, key):
@@ -53,7 +52,7 @@ def create_index(data):
                 if id not in index[word]:
                     index[word][id] = {key: [pos,]}
                     _tf = tf(word, data[key])
-                    index[word]['_idf']= idf(word, index[word]['_tf'], docs_with_the_word=len(index[word])-2)
+                    index[word]['_idf']= idf(docs_with_the_word=len(index[word])-2)
                     index[word]['_tf'][get_tf_key(id, key)] = tf(word, data[key])
                 elif key not in index[word][id]:
                     index[word][id][key] = [pos,]
@@ -69,13 +68,14 @@ def create_index(data):
                         {
                             key: [pos,]
                         },
-                    '_idf': idf(word, docs_with_the_word=1),
+                    '_idf': idf(docs_with_the_word=1),
                     '_tf': {get_tf_key(id, key): tf(word, data[key])}
                 }
     index.sync()
 
 
 def store_object(data):
+    print "type", type(data['id'])
     db[data['id']] = data
     db.sync()
     create_index(copy.deepcopy(data))
@@ -83,12 +83,36 @@ def store_object(data):
 
 
 def delete_object(oid):
-    stemmed_words = get_stemmed_list(db[oid]['data'])
-    for word in set(stemmed_words):
-        index[word].remove(oid)
+    try:
+        stemmed_words = get_stemmed_list(db[oid]['data'])
+        stemmed_words += get_stemmed_list(db[oid]['title'])
+    except KeyError:
+        try:
+            oid = int(oid)
+            stemmed_words = get_stemmed_list(db[oid]['data'])
+            stemmed_words += get_stemmed_list(db[oid]['title'])
+        except KeyError:
+            return "not done"
+    stemmed_words = list(set(stemmed_words))
     del db[oid]
+    for word in set(stemmed_words):
+        try:
+            index[word]['_idf'] = idf(docs_with_the_word=len(index[word]) - 3)
+        except ZeroDivisionError:
+            del index[word]
+        else:
+            del index[word][oid]
+            try:
+                del index[word]['_tf'][get_tf_key(id, 'title')]
+            except KeyError:
+                pass
+            try:
+                del index[word]['_tf'][get_tf_key(id, 'data')]
+            except KeyError:
+                pass
     db.sync()
     index.sync()
+    return "done"
 
 
 def get_object(oid):
